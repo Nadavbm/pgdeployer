@@ -25,12 +25,12 @@ import (
 
 // PgDeployerSpec defines the desired state of PgDeployer
 type PgDeployerSpec struct {
-	PgVersion     string
-	ContainerPort int32
-	CpuRequest    string
-	CpuLimit      string
-	MemoryRequest string
-	MemoryLimit   string
+	PgVersion     string `json:"pg_version,omitempty"`
+	ContainerPort int32  `json:"port,omitempty"`
+	CpuRequest    string `json:"cpu_req,omitempty"`
+	CpuLimit      string `json:"cpu_lim,omitempty"`
+	MemoryRequest string `json:"mem_req,omitempty"`
+	MemoryLimit   string `json:"mem_lim,omitempty"`
 }
 
 // PgDeployerStatus defines the observed state of PgDeployer

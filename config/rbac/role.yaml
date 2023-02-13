@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - pgdeployer.example.com
+  resources:
+  - pgdeployers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pgdeployer.example.com
+  resources:
+  - pgdeployers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - pgdeployer.example.com
+  resources:
+  - pgdeployers/status
+  verbs:
+  - get
+  - patch
+  - update

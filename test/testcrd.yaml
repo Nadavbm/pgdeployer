@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pgdep-test
+  labels:
+    name: pgdep-test
+---
+apiVersion: pgdeployer.example.com/v1alpha1
+kind: PgDeployer
+metadata:
+  name: pgdep-test
+  namespace: pgdep-test
+spec:
+  cpu_lim: "1000m"
+  cpu_req: "200m"
+  mem_lim: "512Mi"
+  mem_req: "256Mi"
+  pg_version: "14"
+  port: 5432
