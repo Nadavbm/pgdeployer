@@ -80,7 +80,7 @@ func (r *PgDeployerReconciler) buildDeployment(ns string, testing bool, pgDeploy
 
 // buildConfigMap will build a kubernetes config map for postgres
 func (r *PgDeployerReconciler) buildConfigMap(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.ConfigMap, error) {
-	component := "pgcm"
+	component := "pg-cm"
 	cm := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -104,7 +104,7 @@ func (r *PgDeployerReconciler) buildConfigMap(ns string, testing bool, pgDeploy 
 
 // buildSecret kubenretes secret for postgres (password generated on the fly and to get it use kubectl get sercet secret-name -o yaml etc.)
 func (r *PgDeployerReconciler) buildSecret(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.Secret, error) {
-	component := "pgsecret"
+	component := "pg-secret"
 	sec := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -123,7 +123,7 @@ func (r *PgDeployerReconciler) buildSecret(ns string, testing bool, pgDeploy *v1
 
 // buildPersistentVolume in kubernetes
 func (r *PgDeployerReconciler) buildPersistentVolume(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.PersistentVolume, error) {
-	component := "pgpv"
+	component := "pg-pv"
 	pv := &v1.PersistentVolume{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolume",
@@ -142,7 +142,7 @@ func (r *PgDeployerReconciler) buildPersistentVolume(ns string, testing bool, pg
 
 // buildPersistentVolumeClaim from the persistent volume
 func (r *PgDeployerReconciler) buildPersistentVolumeClaim(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.PersistentVolumeClaim, error) {
-	component := "pgpvc"
+	component := "pg-pvc"
 	pvc := &v1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
@@ -161,7 +161,7 @@ func (r *PgDeployerReconciler) buildPersistentVolumeClaim(ns string, testing boo
 
 // buildService in kubernetes with pgDeploy port
 func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy v1alpha1.PgDeployerSpec) *v1.Service {
-	component := "pgservice"
+	component := "pg-service"
 	return &v1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -200,7 +200,7 @@ func getEnvVarSecretSource(envName, name, secret string) v1.EnvVar {
 
 func buildMetadata(ns, component string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
-		Name:      ns,
+		Name:      component,
 		Namespace: ns,
 		Labels:    buildLabels(component),
 	}

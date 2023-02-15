@@ -104,23 +104,23 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	//deploy, err := r.buildDeployment(req.Namespace, testing, &pgDeploy)
-	//if err != nil {
-	//	r.Logger.Error("could not build deployment")
-	//	return ctrl.Result{}, err
-	//}
-	//r.Logger.Info("create deployment", zap.String("namespace", req.Namespace), zap.String("name", deploy.Name))
-	//err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, deploy)
-	//if err != nil {
-	//	if errors.IsNotFound(err) {
-	//		if err = r.Create(ctx, deploy); err != nil {
-	//			r.Logger.Error("could not create a deployment")
-	//			return ctrl.Result{}, err
-	//		}
-	//	} else {
-	//		return ctrl.Result{}, err
-	//	}
-	//}
+	deploy, err := r.buildDeployment(req.Namespace, testing, &pgDeploy)
+	if err != nil {
+		r.Logger.Error("could not build deployment")
+		return ctrl.Result{}, err
+	}
+	r.Logger.Info("create deployment", zap.String("namespace", req.Namespace), zap.String("name", deploy.Name))
+	err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, deploy)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err = r.Create(ctx, deploy); err != nil {
+				r.Logger.Error("could not create a deployment")
+				return ctrl.Result{}, err
+			}
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
