@@ -23,17 +23,19 @@ import (
 	pgdeployerv1alpha1 "github.com/nadavbm/pgdeployer/api/v1alpha1"
 	"github.com/nadavbm/zlog"
 	"go.uber.org/zap"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PgDeployerReconciler reconciles a PgDeployer object
 type PgDeployerReconciler struct {
-	Logger zlog.Logger
+	Logger *zlog.Logger
 	client.Client
+	client kubernetes.Clientset
 	Scheme *runtime.Scheme
 }
 
@@ -51,27 +53,74 @@ type PgDeployerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := r.Logger.With(zap.String("reconciler", "pgDeployer"), zap.Namespace(req.Namespace))
+	testing := false
+	logger := zlog.New()
+	r.Logger = logger
 
 	var pgDeploy v1alpha1.PgDeployer
-	if err := r.Get(ctx, req.NamespacedName, &pgDeploy); err != nil {
+	err := r.Get(ctx, req.NamespacedName, &pgDeploy)
+	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error("pg deploy not found")
+			r.Logger.Error("pg deploy not found")
 			return ctrl.Result{}, err
 		}
-		logger.Error("could not fetch pg deploy")
+		r.Logger.Error("could not fetch pg deploy")
 		return ctrl.Result{}, err
 	}
 
-	var deployment appsv1.Deployment
-	if err := r.Get(ctx, req.NamespacedName, &deployment); err != nil {
-		logger.Error("unable to fetch Deployment")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	if err := ctrl.SetControllerReference(&deployment, &deployment.ObjectMeta, r.Scheme); err != nil {
+	cm, err := r.buildConfigMap(req.Namespace, testing, &pgDeploy)
+	if err != nil {
+		r.Logger.Error("could not build configmap")
 		return ctrl.Result{}, err
 	}
+	r.Logger.Info("create configmap", zap.String("namespace", req.Namespace), zap.String("name", cm.Name))
+	err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, cm)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err = r.Create(ctx, cm); err != nil {
+				r.Logger.Error("could not create a configmap")
+				return ctrl.Result{}, err
+			}
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+
+	secret, err := r.buildSecret(req.Namespace, testing, &pgDeploy)
+	if err != nil {
+		r.Logger.Error("could not build secret")
+		return ctrl.Result{}, err
+	}
+	r.Logger.Info("create pg-secret", zap.String("namespace", req.Namespace), zap.String("name", secret.Name))
+	err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, secret)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err = r.Create(ctx, secret); err != nil {
+				r.Logger.Error("could not create a secret")
+				return ctrl.Result{}, err
+			}
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+
+	//deploy, err := r.buildDeployment(req.Namespace, testing, &pgDeploy)
+	//if err != nil {
+	//	r.Logger.Error("could not build deployment")
+	//	return ctrl.Result{}, err
+	//}
+	//r.Logger.Info("create deployment", zap.String("namespace", req.Namespace), zap.String("name", deploy.Name))
+	//err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, deploy)
+	//if err != nil {
+	//	if errors.IsNotFound(err) {
+	//		if err = r.Create(ctx, deploy); err != nil {
+	//			r.Logger.Error("could not create a deployment")
+	//			return ctrl.Result{}, err
+	//		}
+	//	} else {
+	//		return ctrl.Result{}, err
+	//	}
+	//}
 
 	return ctrl.Result{}, nil
 }
