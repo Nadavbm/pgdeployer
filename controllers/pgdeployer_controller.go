@@ -61,10 +61,10 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err := r.Get(ctx, req.NamespacedName, &pgDeploy)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Error("pg deploy not found")
-			return ctrl.Result{}, err
+			r.Logger.Info("pg deploy not found, probably deleted. skipping..", zap.String("namespace", req.Namespace))
+			return ctrl.Result{}, nil
 		}
-		r.Logger.Error("could not fetch pg deploy")
+		r.Logger.Error("could not fetch v1alpha1.PgDeployer, check if crd applied in the cluster..")
 		return ctrl.Result{}, err
 	}
 
