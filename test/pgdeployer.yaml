@@ -21,11 +21,11 @@ rules:
     resources: ["namespaces"]
     verbs: ["get", "list", "create"]
   - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "create", "update", "delete", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    verbs: ["get", "list", "create", "update", "delete", "watch"]
   - apiGroups: ["pgdeployer.example.com"]
     resources: ["pgdeployers"]
     verbs: ["*"]
@@ -49,7 +49,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.8.0
-  creationTimestamp: null
   name: pgdeployers.pgdeployer.example.com
 spec:
   group: pgdeployer.example.com
@@ -127,13 +126,14 @@ spec:
       serviceAccountName: pgdeploy-operator
       containers:
         - name: pgdeploy-operator
-          image: nadavbm/pgdeploy-operator:v0.0.1
+          image: nadavbm/pgdeploy-operator:v0.0.3
           command:
             - /pgdeploy-operator
           imagePullPolicy: Always
           resources:
             limits:
+              cpu: 200m
               memory: 200Mi
             requests:
               cpu: 100m
-              memory: 200Mi
+              memory: 100Mi
