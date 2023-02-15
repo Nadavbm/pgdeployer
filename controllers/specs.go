@@ -34,7 +34,7 @@ func (r *PgDeployerReconciler) buildDeployment(ns string, testing bool, pgDeploy
 					Containers: []v1.Container{
 						{
 							Name:  "database",
-							Image: "postgres:14",
+							Image: "postgres:" + pgDeploy.Spec.PgVersion,
 							Ports: []v1.ContainerPort{
 								{
 									Protocol:      v1.ProtocolTCP,
@@ -160,9 +160,9 @@ func (r *PgDeployerReconciler) buildPersistentVolumeClaim(ns string, testing boo
 }
 
 // buildService in kubernetes with pgDeploy port
-func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy v1alpha1.PgDeployerSpec) *v1.Service {
+func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.Service, error) {
 	component := "pg-service"
-	return &v1.Service{
+	svc := &v1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
@@ -172,12 +172,18 @@ func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy v1
 			Type: v1.ServiceTypeNodePort,
 			Ports: []v1.ServicePort{
 				{
-					Port: pgDeploy.ContainerPort,
+					Port: pgDeploy.Spec.ContainerPort,
 				},
 			},
 			Selector: buildLabels(component),
 		},
 	}
+
+	if err := controllerutil.SetControllerReference(pgDeploy, svc, r.Scheme); err != nil {
+		return nil, err
+	}
+
+	return svc, nil
 }
 
 //

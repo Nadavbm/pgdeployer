@@ -21,7 +21,7 @@ rules:
     resources: ["namespaces"]
     verbs: ["get", "list", "create"]
   - apiGroups: [""]
-    resources: ["configmaps", "secrets"]
+    resources: ["configmaps", "secrets", "services"]
     verbs: ["get", "list", "create", "update", "delete", "watch"]
   - apiGroups: ["apps"]
     resources: ["deployments"]

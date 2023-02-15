@@ -122,6 +122,24 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	svc, err := r.buildService(req.Namespace, testing, &pgDeploy)
+	if err != nil {
+		r.Logger.Error("could not build service")
+		return ctrl.Result{}, err
+	}
+	r.Logger.Info("create service", zap.String("namespace", req.Namespace), zap.String("name", svc.Name))
+	err = r.Get(ctx, types.NamespacedName{Name: pgDeploy.Name, Namespace: pgDeploy.Namespace}, svc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err = r.Create(ctx, svc); err != nil {
+				r.Logger.Error("could not create service")
+				return ctrl.Result{}, err
+			}
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 
