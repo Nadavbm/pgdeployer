@@ -1,20 +1,16 @@
-package controllers
+package v1alpha1
 
 import (
 	"testing"
 
-	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestKubernetesSpecifications(t *testing.T) {
-	testing := true
-	r := PgDeployerReconciler{}
+	var pgDeploy PgDeployer
 
-	var pgDeploy v1alpha1.PgDeployer
-
-	deploy := v1alpha1.PgDeployerSpec{
+	deploy := PgDeployerSpec{
 		PgVersion:     "14",
 		ContainerPort: 5432,
 		CpuRequest:    "500m",
@@ -34,10 +30,8 @@ func TestKubernetesSpecifications(t *testing.T) {
 		v1.ResourceCPU:    resource.MustParse(deploy.CpuRequest),
 	}
 
-	deployment, err := r.buildDeployment("testing", testing, &pgDeploy)
-	if err != nil {
-		t.Fatal("could not build a deployment")
-	}
+	deployment := buildDeployment("testing", &pgDeploy)
+
 	containers := deployment.Spec.Template.Spec.Containers
 
 	requests := containers[0].Resources.Requests

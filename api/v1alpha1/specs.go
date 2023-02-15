@@ -1,23 +1,34 @@
-package controllers
+package v1alpha1
 
 import (
 	"math/rand"
 
-	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const numOfReplicas = 1
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&*"
 
-func (r *PgDeployerReconciler) buildDeployment(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*appsv1.Deployment, error) {
+func (pd *PgDeployer) Construct(ns string) []metav1.Object {
+	var objects []metav1.Object
+
+	cm := buildConfigMap(ns, pd)
+	secret := buildSecret(ns, pd)
+	deploy := buildDeployment(ns, pd)
+	svc := buildService(ns, pd)
+
+	objects = append(objects, cm, secret, deploy, svc)
+
+	return objects
+}
+
+func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
 	component := "pgdeployment"
 	replicas := int32(numOfReplicas)
-	deploy := &appsv1.Deployment{
+	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
@@ -69,19 +80,12 @@ func (r *PgDeployerReconciler) buildDeployment(ns string, testing bool, pgDeploy
 			},
 		},
 	}
-
-	if !testing {
-		if err := controllerutil.SetControllerReference(pgDeploy, deploy, r.Scheme); err != nil {
-			return nil, err
-		}
-	}
-	return deploy, nil
 }
 
 // buildConfigMap will build a kubernetes config map for postgres
-func (r *PgDeployerReconciler) buildConfigMap(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.ConfigMap, error) {
+func buildConfigMap(ns string, pgDeploy *PgDeployer) *v1.ConfigMap {
 	component := "pg-cm"
-	cm := &v1.ConfigMap{
+	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "batch/v1/beta1",
@@ -92,20 +96,12 @@ func (r *PgDeployerReconciler) buildConfigMap(ns string, testing bool, pgDeploy 
 			"postgresql.conf": "data_directory = /var/lib/postgresql/data/data-directory",
 		},
 	}
-
-	if !testing {
-		if err := controllerutil.SetControllerReference(pgDeploy, cm, r.Scheme); err != nil {
-			return nil, err
-		}
-	}
-
-	return cm, nil
 }
 
 // buildSecret kubenretes secret for postgres (password generated on the fly and to get it use kubectl get sercet secret-name -o yaml etc.)
-func (r *PgDeployerReconciler) buildSecret(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.Secret, error) {
+func buildSecret(ns string, pgDeploy *PgDeployer) *v1.Secret {
 	component := "pg-secret"
-	sec := &v1.Secret{
+	return &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -113,18 +109,12 @@ func (r *PgDeployerReconciler) buildSecret(ns string, testing bool, pgDeploy *v1
 		ObjectMeta: buildMetadata(ns, component),
 		StringData: createSecret(),
 	}
-
-	if err := controllerutil.SetControllerReference(pgDeploy, sec, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return sec, nil
 }
 
 // buildService in kubernetes with pgDeploy port
-func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.Service, error) {
+func buildService(ns string, pgDeploy *PgDeployer) *v1.Service {
 	component := "pg-service"
-	svc := &v1.Service{
+	return &v1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
@@ -140,12 +130,6 @@ func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy *v
 			Selector: buildLabels(component),
 		},
 	}
-
-	if err := controllerutil.SetControllerReference(pgDeploy, svc, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return svc, nil
 }
 
 //

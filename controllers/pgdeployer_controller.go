@@ -25,16 +25,15 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // PgDeployerReconciler reconciles a PgDeployer object
 type PgDeployerReconciler struct {
 	Logger *zlog.Logger
 	client.Client
-	client kubernetes.Clientset
 	Scheme *runtime.Scheme
 }
 
@@ -52,7 +51,6 @@ type PgDeployerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	testing := false
 	logger := zlog.New()
 	r.Logger = logger
 
@@ -68,95 +66,27 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	r.Logger.Info("create configmap", zap.String("namespace", req.Namespace))
-	// config map creation
-	cm, err := r.buildConfigMap(req.Namespace, testing, &pgDeploy)
-	if err != nil {
-		r.Logger.Error("could not create configmap specs", zap.Error(err))
-		return ctrl.Result{}, err
-	}
+	objects := pgDeploy.Construct(req.Namespace)
 
-	if err = r.Create(ctx, cm); err != nil {
-		if errors.IsAlreadyExists(err) {
-			if err := r.Update(ctx, cm); err != nil {
-				if errors.IsInvalid(err) {
-					r.Logger.Error("invalid config map update")
-				} else {
-					r.Logger.Error("unable to update configmap")
-				}
-			}
-		} else {
-			r.Logger.Error("could not create a configmap", zap.Error(err))
+	for _, object := range objects {
+		if err := controllerutil.SetControllerReference(&pgDeploy, object, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
 
-	r.Logger.Info("create pg-secret", zap.String("namespace", req.Namespace))
-	// secret creation
-	secret, err := r.buildSecret(req.Namespace, testing, &pgDeploy)
-	if err != nil {
-		r.Logger.Error("could not build secret", zap.Error(err))
-		return ctrl.Result{}, err
-	}
-
-	if err = r.Create(ctx, secret); err != nil {
-		if errors.IsAlreadyExists(err) {
-			if err := r.Update(ctx, secret); err != nil {
-				if errors.IsInvalid(err) {
-					r.Logger.Error("invalid secret update")
-				} else {
-					r.Logger.Error("unable to update secret")
+		r.Logger.Info("create object", zap.String("namespace", req.Namespace), zap.String("object", object.GetName()))
+		if err := r.Create(ctx, object.(client.Object)); err != nil {
+			if errors.IsAlreadyExists(err) {
+				if err := r.Update(ctx, object.(client.Object)); err != nil {
+					if errors.IsInvalid(err) {
+						r.Logger.Error("invalid update", zap.String("object", object.GetName()))
+					} else {
+						r.Logger.Error("unable to update", zap.String("object", object.GetName()))
+					}
 				}
+			} else {
+				r.Logger.Error("could not create object", zap.String("object", object.GetName()), zap.Error(err))
+				return ctrl.Result{}, err
 			}
-		} else {
-			r.Logger.Error("could not create secret", zap.Error(err))
-			return ctrl.Result{}, err
-		}
-	}
-
-	r.Logger.Info("create deployment", zap.String("namespace", req.Namespace))
-	// postgres deployment creation
-	deploy, err := r.buildDeployment(req.Namespace, testing, &pgDeploy)
-	if err != nil {
-		r.Logger.Error("could not build deployment", zap.Error(err))
-		return ctrl.Result{}, err
-	}
-
-	if err = r.Create(ctx, deploy); err != nil {
-		if errors.IsAlreadyExists(err) {
-			if err := r.Update(ctx, secret); err != nil {
-				if errors.IsInvalid(err) {
-					r.Logger.Error("invalid deployment update")
-				} else {
-					r.Logger.Error("unable to update deployment")
-				}
-			}
-		} else {
-			r.Logger.Error("could not create a deployment", zap.Error(err))
-			return ctrl.Result{}, err
-		}
-	}
-
-	r.Logger.Info("create service", zap.String("namespace", req.Namespace))
-	// service creation
-	svc, err := r.buildService(req.Namespace, testing, &pgDeploy)
-	if err != nil {
-		r.Logger.Error("could not build service", zap.Error(err))
-		return ctrl.Result{}, err
-	}
-
-	if err = r.Create(ctx, svc); err != nil {
-		if errors.IsAlreadyExists(err) {
-			if err := r.Update(ctx, secret); err != nil {
-				if errors.IsInvalid(err) {
-					r.Logger.Error("invalid service update")
-				} else {
-					r.Logger.Error("unable to update service")
-				}
-			}
-		} else {
-			r.Logger.Error("could not create service", zap.Error(err))
-			return ctrl.Result{}, err
 		}
 	}
 
