@@ -54,7 +54,7 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger := zlog.New()
 	r.Logger = logger
 
-	r.Logger.Info("v1alpha1.PgDeployer added. Start reconcile", zap.String("namespace", req.Namespace))
+	r.Logger.Info("v1alpha1.PgDeployer changed. Start reconcile", zap.String("namespace", req.NamespacedName.Namespace))
 
 	var pgDeploy v1alpha1.PgDeployer
 	if err := r.Get(ctx, req.NamespacedName, &pgDeploy); err != nil {
