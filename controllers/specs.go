@@ -121,44 +121,6 @@ func (r *PgDeployerReconciler) buildSecret(ns string, testing bool, pgDeploy *v1
 	return sec, nil
 }
 
-// buildPersistentVolume in kubernetes
-func (r *PgDeployerReconciler) buildPersistentVolume(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.PersistentVolume, error) {
-	component := "pg-pv"
-	pv := &v1.PersistentVolume{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PersistentVolume",
-			APIVersion: "v1",
-		},
-		ObjectMeta: buildMetadata(ns, component),
-		Spec:       v1.PersistentVolumeSpec{},
-	}
-
-	if err := controllerutil.SetControllerReference(pgDeploy, pv, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return pv, nil
-}
-
-// buildPersistentVolumeClaim from the persistent volume
-func (r *PgDeployerReconciler) buildPersistentVolumeClaim(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.PersistentVolumeClaim, error) {
-	component := "pg-pvc"
-	pvc := &v1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PersistentVolumeClaim",
-			APIVersion: "v1",
-		},
-		ObjectMeta: buildMetadata(ns, component),
-		Spec:       v1.PersistentVolumeClaimSpec{},
-	}
-
-	if err := controllerutil.SetControllerReference(pgDeploy, pvc, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return pvc, nil
-}
-
 // buildService in kubernetes with pgDeploy port
 func (r *PgDeployerReconciler) buildService(ns string, testing bool, pgDeploy *v1alpha1.PgDeployer) (*v1.Service, error) {
 	component := "pg-service"

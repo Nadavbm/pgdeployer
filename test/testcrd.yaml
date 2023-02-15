@@ -8,7 +8,7 @@ metadata:
 apiVersion: pgdeployer.example.com/v1alpha1
 kind: PgDeployer
 metadata:
-  name: pgdep-test
+  name: pgdeploy
   namespace: pgdep-test
 spec:
   cpu_lim: "1000m"
