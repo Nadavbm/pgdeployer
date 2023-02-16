@@ -66,7 +66,7 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	objects := pgDeploy.Construct(req.Namespace)
+	objects := pgDeploy.ConstructObjectsFromSpecifications(req.Namespace)
 
 	for _, object := range objects {
 		if err := controllerutil.SetControllerReference(&pgDeploy, object, r.Scheme); err != nil {

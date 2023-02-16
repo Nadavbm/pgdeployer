@@ -12,7 +12,8 @@ import (
 const numOfReplicas = 1
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&*"
 
-func (pd *PgDeployer) Construct(ns string) []metav1.Object {
+// ConstructObjectsFromSpecifications construct a slice of kubernetes object interfaces from specifications
+func (pd *PgDeployer) ConstructObjectsFromSpecifications(ns string) []metav1.Object {
 	var objects []metav1.Object
 
 	cm := buildConfigMap(ns, pd)
@@ -25,6 +26,7 @@ func (pd *PgDeployer) Construct(ns string) []metav1.Object {
 	return objects
 }
 
+// buildDeployment creates a kubernetes deployment specification
 func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
 	component := "pgdeployment"
 	replicas := int32(numOfReplicas)
@@ -63,14 +65,8 @@ func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
 								},
 							},
 							Env: []v1.EnvVar{
-								{
-									Name:  "POSTGRES_DATABASE",
-									Value: "postgres",
-								},
-								{
-									Name:  "POSTGRES_USER",
-									Value: "postgres",
-								},
+								getEnvVarSecretSource("POSTGRES_DATABASE", "pg-secret", "postgres_database"),
+								getEnvVarSecretSource("POSTGRES_USER", "pg-secret", "postgres_user"),
 								getEnvVarSecretSource("POSTGRES_PASSWORD", "pg-secret", "postgres_password"),
 							},
 						},
