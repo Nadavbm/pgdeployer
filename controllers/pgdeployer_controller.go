@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	pgdeployerv1alpha1 "github.com/nadavbm/pgdeployer/api/v1alpha1"
@@ -54,16 +55,16 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger := zlog.New()
 	r.Logger = logger
 
-	r.Logger.Info("v1alpha1.PgDeployer changed. Start reconcile", zap.String("namespace", req.NamespacedName.Namespace))
+	r.Logger.Info("Start reconcile", zap.String("namespace", req.NamespacedName.Namespace))
 
 	var pgDeploy v1alpha1.PgDeployer
 	if err := r.Get(ctx, req.NamespacedName, &pgDeploy); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Info("pg deploy not found, probably deleted. skipping..", zap.String("namespace", req.Namespace))
-			return ctrl.Result{}, nil
+			r.Logger.Info("pgdeploy not found, probably deleted. skipping..", zap.String("namespace", req.Namespace))
+			return ctrl.Result{Requeue: false, RequeueAfter: 0}, nil
 		}
-		r.Logger.Error("could not fetch v1alpha1.PgDeployer, check if crd applied in the cluster..")
-		return ctrl.Result{}, err
+		r.Logger.Error("could not fetch v1alpha1.PgDeployer")
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Minute}, err
 	}
 
 	objects := pgDeploy.ConstructObjectsFromSpecifications(req.Namespace)
@@ -96,6 +97,7 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PgDeployerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("pgdeploy-contoller").
 		For(&pgdeployerv1alpha1.PgDeployer{}).
 		Complete(r)
 }
