@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // PgDeployerReconciler reconciles a PgDeployer object
@@ -72,10 +71,6 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	objects := pgDeploy.ConstructObjectsFromSpecifications(req.Namespace)
 
 	for _, object := range objects {
-		if err := controllerutil.SetControllerReference(&pgDeploy, object, r.Scheme); err != nil {
-			return ctrl.Result{}, err
-		}
-
 		r.Logger.Info("create object", zap.String("namespace", req.Namespace), zap.String("object", object.GetName()))
 		if err := r.Create(ctx, object.(client.Object)); err != nil {
 			if errors.IsAlreadyExists(err) {
@@ -86,6 +81,7 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 						r.Logger.Error("unable to update", zap.String("object", object.GetName()))
 					}
 				}
+				return ctrl.Result{}, nil
 			} else {
 				r.Logger.Error("could not create object", zap.String("object", object.GetName()), zap.Error(err))
 				return ctrl.Result{}, err
@@ -104,5 +100,6 @@ func (r *PgDeployerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&v1.Secret{}).
 		Owns(&v1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&v1.Service{}).
 		Complete(r)
 }

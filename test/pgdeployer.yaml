@@ -126,7 +126,7 @@ spec:
       serviceAccountName: pgdeploy-operator
       containers:
         - name: pgdeploy-operator
-          image: nadavbm/pgdeploy-operator:v0.0.8
+          image: nadavbm/pgdeploy-operator:v0.0.9
           command:
             - /pgdeploy-operator
           imagePullPolicy: Always

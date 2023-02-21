@@ -91,6 +91,7 @@ func main() {
 	if err = (&controllers.PgDeployerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Logger: logger,
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error("unable to create controller", zzap.Error(err))
 		os.Exit(1)

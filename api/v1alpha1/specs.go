@@ -7,14 +7,15 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const numOfReplicas = 1
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&*"
 
 // ConstructObjectsFromSpecifications construct a slice of kubernetes object interfaces from specifications
-func (pd *PgDeployer) ConstructObjectsFromSpecifications(ns string) []metav1.Object {
-	var objects []metav1.Object
+func (pd *PgDeployer) ConstructObjectsFromSpecifications(ns string) []client.Object {
+	var objects []client.Object
 
 	cm := buildConfigMap(ns, pd)
 	secret := buildSecret(ns, pd)
