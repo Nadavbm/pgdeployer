@@ -35,14 +35,14 @@ func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
 		},
-		ObjectMeta: buildMetadata(ns, component),
+		ObjectMeta: buildMetadata(ns, component, pgDeploy),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: buildLabels(component),
 			},
 			Template: v1.PodTemplateSpec{
-				ObjectMeta: buildMetadata(ns, component),
+				ObjectMeta: buildMetadata(ns, component, pgDeploy),
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
@@ -86,7 +86,7 @@ func buildConfigMap(ns string, pgDeploy *PgDeployer) *v1.ConfigMap {
 			Kind:       "ConfigMap",
 			APIVersion: "batch/v1/beta1",
 		},
-		ObjectMeta: buildMetadata(ns, component),
+		ObjectMeta: buildMetadata(ns, component, pgDeploy),
 		Data: map[string]string{
 			"pg_hba.conf":     "###",
 			"postgresql.conf": "data_directory = /var/lib/postgresql/data/data-directory",
@@ -102,7 +102,7 @@ func buildSecret(ns string, pgDeploy *PgDeployer) *v1.Secret {
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
-		ObjectMeta: buildMetadata(ns, component),
+		ObjectMeta: buildMetadata(ns, component, pgDeploy),
 		StringData: createSecret(),
 	}
 }
@@ -115,7 +115,7 @@ func buildService(ns string, pgDeploy *PgDeployer) *v1.Service {
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
-		ObjectMeta: buildMetadata(ns, component),
+		ObjectMeta: buildMetadata(ns, component, pgDeploy),
 		Spec: v1.ServiceSpec{
 			Type: v1.ServiceTypeNodePort,
 			Ports: []v1.ServicePort{
@@ -146,11 +146,21 @@ func getEnvVarSecretSource(envName, name, secret string) v1.EnvVar {
 	}
 }
 
-func buildMetadata(ns, component string) metav1.ObjectMeta {
+func buildMetadata(ns, component string, pgDeploy *PgDeployer) metav1.ObjectMeta {
+	controller := true
 	return metav1.ObjectMeta{
 		Name:      component,
 		Namespace: ns,
 		Labels:    buildLabels(component),
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: pgDeploy.APIVersion,
+				Kind:       pgDeploy.Kind,
+				Name:       pgDeploy.Name,
+				UID:        pgDeploy.UID,
+				Controller: &controller,
+			},
+		},
 	}
 }
 
