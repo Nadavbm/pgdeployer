@@ -24,6 +24,8 @@ import (
 	pgdeployerv1alpha1 "github.com/nadavbm/pgdeployer/api/v1alpha1"
 	"github.com/nadavbm/zlog"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -99,5 +101,8 @@ func (r *PgDeployerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("pgdeploy-contoller").
 		For(&pgdeployerv1alpha1.PgDeployer{}).
+		Owns(&v1.Secret{}).
+		Owns(&v1.ConfigMap{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
