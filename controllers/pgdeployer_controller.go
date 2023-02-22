@@ -18,16 +18,18 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	pgdeployerv1alpha1 "github.com/nadavbm/pgdeployer/api/v1alpha1"
 	"github.com/nadavbm/zlog"
 	"go.uber.org/zap"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // PgDeployerReconciler reconciles a PgDeployer object
@@ -54,25 +56,21 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger := zlog.New()
 	r.Logger = logger
 
-	r.Logger.Info("v1alpha1.PgDeployer changed. Start reconcile", zap.String("namespace", req.NamespacedName.Namespace))
+	r.Logger.Info("Start reconcile", zap.String("namespace", req.NamespacedName.Namespace))
 
 	var pgDeploy v1alpha1.PgDeployer
 	if err := r.Get(ctx, req.NamespacedName, &pgDeploy); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Info("pg deploy not found, probably deleted. skipping..", zap.String("namespace", req.Namespace))
-			return ctrl.Result{}, nil
+			r.Logger.Info("pgdeploy not found, probably deleted. skipping..", zap.String("namespace", req.Namespace))
+			return ctrl.Result{Requeue: false, RequeueAfter: 0}, nil
 		}
-		r.Logger.Error("could not fetch v1alpha1.PgDeployer, check if crd applied in the cluster..")
-		return ctrl.Result{}, err
+		r.Logger.Error("could not fetch v1alpha1.PgDeployer")
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Minute}, err
 	}
 
 	objects := pgDeploy.ConstructObjectsFromSpecifications(req.Namespace)
 
 	for _, object := range objects {
-		if err := controllerutil.SetControllerReference(&pgDeploy, object, r.Scheme); err != nil {
-			return ctrl.Result{}, err
-		}
-
 		r.Logger.Info("create object", zap.String("namespace", req.Namespace), zap.String("object", object.GetName()))
 		if err := r.Create(ctx, object.(client.Object)); err != nil {
 			if errors.IsAlreadyExists(err) {
@@ -83,6 +81,7 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 						r.Logger.Error("unable to update", zap.String("object", object.GetName()))
 					}
 				}
+				return ctrl.Result{}, nil
 			} else {
 				r.Logger.Error("could not create object", zap.String("object", object.GetName()), zap.Error(err))
 				return ctrl.Result{}, err
@@ -96,6 +95,11 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PgDeployerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("pgdeploy-contoller").
 		For(&pgdeployerv1alpha1.PgDeployer{}).
+		Owns(&v1.Secret{}).
+		Owns(&v1.ConfigMap{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&v1.Service{}).
 		Complete(r)
 }
