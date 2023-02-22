@@ -1,34 +1,20 @@
-package v1alpha1
+package controllers
 
 import (
 	"math/rand"
 
+	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const numOfReplicas = 1
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&*"
 
-// ConstructObjectsFromSpecifications construct a slice of kubernetes object interfaces from specifications
-func (pd *PgDeployer) ConstructObjectsFromSpecifications(ns string) []client.Object {
-	var objects []client.Object
-
-	cm := buildConfigMap(ns, pd)
-	secret := buildSecret(ns, pd)
-	deploy := buildDeployment(ns, pd)
-	svc := buildService(ns, pd)
-
-	objects = append(objects, cm, secret, deploy, svc)
-
-	return objects
-}
-
 // buildDeployment creates a kubernetes deployment specification
-func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
+func buildDeployment(ns string, pgDeploy *v1alpha1.PgDeployer) *appsv1.Deployment {
 	component := "pgdeployment"
 	replicas := int32(numOfReplicas)
 	return &appsv1.Deployment{
@@ -80,7 +66,7 @@ func buildDeployment(ns string, pgDeploy *PgDeployer) *appsv1.Deployment {
 }
 
 // buildConfigMap will build a kubernetes config map for postgres
-func buildConfigMap(ns string, pgDeploy *PgDeployer) *v1.ConfigMap {
+func buildConfigMap(ns string, pgDeploy *v1alpha1.PgDeployer) *v1.ConfigMap {
 	component := "pg-cm"
 	return &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -96,7 +82,7 @@ func buildConfigMap(ns string, pgDeploy *PgDeployer) *v1.ConfigMap {
 }
 
 // buildSecret kubenretes secret for postgres (password generated on the fly and to get it use kubectl get sercet secret-name -o yaml etc.)
-func buildSecret(ns string, pgDeploy *PgDeployer) *v1.Secret {
+func buildSecret(ns string, pgDeploy *v1alpha1.PgDeployer) *v1.Secret {
 	component := "pg-secret"
 	return &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -109,7 +95,7 @@ func buildSecret(ns string, pgDeploy *PgDeployer) *v1.Secret {
 }
 
 // buildService in kubernetes with pgDeploy port
-func buildService(ns string, pgDeploy *PgDeployer) *v1.Service {
+func buildService(ns string, pgDeploy *v1alpha1.PgDeployer) *v1.Service {
 	component := "pg-service"
 	return &v1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -147,7 +133,7 @@ func getEnvVarSecretSource(envName, name, secret string) v1.EnvVar {
 	}
 }
 
-func buildMetadata(ns, component string, pgDeploy *PgDeployer) metav1.ObjectMeta {
+func buildMetadata(ns, component string, pgDeploy *v1alpha1.PgDeployer) metav1.ObjectMeta {
 	controller := true
 	return metav1.ObjectMeta{
 		Name:      component,
