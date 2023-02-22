@@ -1,16 +1,17 @@
-package v1alpha1
+package controllers
 
 import (
 	"testing"
 
+	"github.com/nadavbm/pgdeployer/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestKubernetesSpecifications(t *testing.T) {
-	var pgDeploy PgDeployer
+	var pgDeploy v1alpha1.PgDeployer
 
-	deploy := PgDeployerSpec{
+	deploy := v1alpha1.PgDeployerSpec{
 		PgVersion:     "14",
 		ContainerPort: 5432,
 		CpuRequest:    "500m",
@@ -63,7 +64,7 @@ func TestKubernetesSpecifications(t *testing.T) {
 		t.Errorf("expected service port to be %d, instead got %d", pgDeploy.Spec.ContainerPort, service.Spec.Ports[0].Port)
 	}
 
-	deploy = PgDeployerSpec{
+	deploy = v1alpha1.PgDeployerSpec{
 		PgVersion:     "13",
 		ContainerPort: 5433,
 		CpuRequest:    "100m",

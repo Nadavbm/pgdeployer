@@ -19,3 +19,4 @@ spec:
 container requests and limits, postgres version and the port used to connect to the pod
 
 in `test/` dir you'll find a read me file explaining how to test this operator in kubenretes.
+

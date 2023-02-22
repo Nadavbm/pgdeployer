@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,25 +69,45 @@ func (r *PgDeployerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Minute}, err
 	}
 
-	objects := pgDeploy.ConstructObjectsFromSpecifications(req.Namespace)
-
-	for _, object := range objects {
-		r.Logger.Info("create object", zap.String("namespace", req.Namespace), zap.String("object", object.GetName()))
-		if err := r.Create(ctx, object.(client.Object)); err != nil {
-			if errors.IsAlreadyExists(err) {
-				if err := r.Update(ctx, object.(client.Object)); err != nil {
-					if errors.IsInvalid(err) {
-						r.Logger.Error("invalid update", zap.String("object", object.GetName()))
-					} else {
-						r.Logger.Error("unable to update", zap.String("object", object.GetName()))
-					}
+	createOrUpdate := func(obj metav1.Object, object client.Object) error {
+		if err := r.Get(ctx, req.NamespacedName, obj.(client.Object)); err != nil {
+			if errors.IsNotFound(err) {
+				r.Logger.Info("create object", zap.String("namespace", req.Namespace), zap.String("object", object.GetName()))
+				if err := r.Create(ctx, object); err != nil && !errors.IsAlreadyExists(err) {
+					r.Logger.Error("could not create object", zap.String("object", object.GetName()), zap.Error(err))
+					return err
 				}
-				return ctrl.Result{}, nil
-			} else {
-				r.Logger.Error("could not create object", zap.String("object", object.GetName()), zap.Error(err))
-				return ctrl.Result{}, err
+				return nil
 			}
+			r.Logger.Error("unable to get", zap.String("object", object.GetName()))
+			return err
+
 		}
+		return nil
+	}
+
+	var cm v1.ConfigMap
+	configMap := buildConfigMap(req.Namespace, &pgDeploy)
+	if err := createOrUpdate(metav1.Object(&cm), configMap); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var sec v1.Secret
+	secret := buildSecret(req.Namespace, &pgDeploy)
+	if err := createOrUpdate(metav1.Object(&sec), secret); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var dep appsv1.Deployment
+	deploy := buildDeployment(req.Namespace, &pgDeploy)
+	if err := createOrUpdate(metav1.Object(&dep), deploy); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var svc v1.Service
+	service := buildService(req.Namespace, &pgDeploy)
+	if err := createOrUpdate(metav1.Object(&svc), service); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
